@@ -44,7 +44,7 @@ import time
 import json
 from datetime import datetime
 from typing import Dict, List
-
+import  pandas as pd
 class ccdata:
     def __init__(self,symbol = 'btcusdt'):
         self._symbol = symbol
@@ -68,12 +68,14 @@ class ccdata:
         print(result_js)
 
     def fetch_market_depth(self):
+        header = ['bids','asks','version','time']
         tradeStr_marketDepth = """
         {
             "sub": "market."""+self._symbol+""".depth.step2", "id": "id1"
         }"""
         self._ws.send(tradeStr_marketDepth)
         trade_id = ''
+        count = True
         while(1):
             compressData:str = self._ws.recv()
             result:str = gzip.decompress(compressData).decode('utf-8')
@@ -98,9 +100,20 @@ class ccdata:
                 #         "ts":"1620200256929",  # The UNIX timestamp in milliseconds adjusted to Singapore time
                 #     }
                 result_js:Dict[str,str] = json.loads(result)
-                print(result_js['tick'])
+                print(result_js)
+                result_pd = pd.DataFrame(result_js['tick'])
+                result_pd['ts'] = pd.to_datetime(result_pd['ts'], unit='ms')
+                result_pd['ts'] = result_pd['ts'] + pd.Timedelta('08:00:00')
+                print(result_pd)
+                if count:
+                    result_pd.to_csv('orderbook.csv', index=False, mode='a', header=header)
+                    count = False
+                else:
+                    result_pd.to_csv('orderbook.csv', index=False, mode='a', header=False)
 
     def fetch_trades(self):
+        header = ['old id','time','new id','amount','price','direction']
+        count = True
         tradeStr_tradeDetail = """
         {"sub": "market."""+self._symbol+""".trade.detail", "id": "id2"}"""
         self._ws.send(tradeStr_tradeDetail)
@@ -123,7 +136,6 @@ class ccdata:
                 except Exception:
                     pass
                 result_js: List[Dict[str, str]] = json.loads(result)
-                print(type(result_js))
                 #     {
                 #         "id":126811369725267309467494213,  # Unique trade id (to be obsoleted)
                 #         "ts":"1620200048835",  # Last trade time (UNIX epoch time in millisecond)
@@ -132,9 +144,19 @@ class ccdata:
                 #         "price":"54542.18",  # Last trade price
                 #         "direction":"buy",  # Aggressive order side (taker's order side) of the trade: 'buy' or 'sell'
                 #     }
-                print(result_js['tick']['data'])
+                result_pd = pd.DataFrame(result_js['tick']['data'])
+                result_pd['ts'] = pd.to_datetime(result_pd['ts'], unit='ms')
+                result_pd['ts'] = result_pd['ts']+ pd.Timedelta('08:00:00')
+                print(result_pd)
+                if count:
+                    result_pd.to_csv('trade.csv',index=False,mode='a',header=header)
+                    count = False
+                else:
+                    result_pd.to_csv('trade.csv',index=False,mode='a',header=False)
 
 if __name__ == '__main__':
     ccdata_btcusdt = ccdata('ethusdt')
+    print(datetime.utcnow())
+    print(datetime.fromtimestamp(1620267990274/1000))
     ccdata_btcusdt.fetch_market_depth()
     # ccdata_btcusdt.fetch_trades()
