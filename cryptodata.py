@@ -68,7 +68,10 @@ class ccdata:
         print(result_js)
 
     def fetch_market_depth(self):
-        header = ['bids','asks','version','time']
+        header = ['local-time']
+        for i in range(20):
+            header += ['bid-price-'+str(i), 'bid-size-'+str(i),'ask-price-'+str(i),'ask-size'+str(i)]
+        header += ['tick-time']
         tradeStr_marketDepth = """
         {
             "sub": "market."""+self._symbol+""".depth.step2", "id": "id1"
@@ -101,9 +104,13 @@ class ccdata:
                 #     }
                 result_js:Dict[str,str] = json.loads(result)
                 print(result_js)
-                result_pd = pd.DataFrame(result_js['tick'])
-                result_pd['ts'] = pd.to_datetime(result_pd['ts'], unit='ms')
-                result_pd['ts'] = result_pd['ts'] + pd.Timedelta('08:00:00')
+                result_pd = pd.DataFrame({'ts':[pd.to_datetime(result_js['ts'], unit='ms')+ pd.Timedelta('08:00:00')]})
+                for i in range(20):
+                    result_pd['bid-price-'+str(i)] = result_js['tick']['bids'][i][0]
+                    result_pd['bid-size-'+str(i)] = result_js['tick']['bids'][i][1]
+                    result_pd['ask-price-'+str(i)] = result_js['tick']['asks'][i][0]
+                    result_pd['ask-size-'+str(i)] = result_js['tick']['asks'][i][1]
+                result_pd['tick_time'] = pd.to_datetime(result_js['tick']['ts'] , unit='ms')+ pd.Timedelta('08:00:00')
                 print(result_pd)
                 if count:
                     result_pd.to_csv('orderbook.csv', index=False, mode='a', header=header)
@@ -112,7 +119,7 @@ class ccdata:
                     result_pd.to_csv('orderbook.csv', index=False, mode='a', header=False)
 
     def fetch_trades(self):
-        header = ['old id','time','new id','amount','price','direction']
+        header = ['old-id','trade-time','new-id','amount','price','direction','local-time','tick-time']
         count = True
         tradeStr_tradeDetail = """
         {"sub": "market."""+self._symbol+""".trade.detail", "id": "id2"}"""
@@ -144,19 +151,20 @@ class ccdata:
                 #         "price":"54542.18",  # Last trade price
                 #         "direction":"buy",  # Aggressive order side (taker's order side) of the trade: 'buy' or 'sell'
                 #     }
+                print(result_js)
                 result_pd = pd.DataFrame(result_js['tick']['data'])
-                result_pd['ts'] = pd.to_datetime(result_pd['ts'], unit='ms')
-                result_pd['ts'] = result_pd['ts']+ pd.Timedelta('08:00:00')
+                result_pd['ts'] = pd.to_datetime(result_pd['ts'], unit='ms')+ pd.Timedelta('08:00:00')
+                result_pd['local time'] = pd.to_datetime(result_js['ts'], unit='ms')+ pd.Timedelta('08:00:00')
+                result_pd['tick time'] = pd.to_datetime(result_js['tick']['ts'], unit='ms')+ pd.Timedelta('08:00:00')
                 print(result_pd)
+                # result_pd = pd.DataFrame(result_ls)
                 if count:
-                    result_pd.to_csv('trade.csv',index=False,mode='a',header=header)
+                    result_pd.to_csv('trade.csv', index=False,mode='a',header=header)
                     count = False
                 else:
                     result_pd.to_csv('trade.csv',index=False,mode='a',header=False)
 
 if __name__ == '__main__':
     ccdata_btcusdt = ccdata('ethusdt')
-    print(datetime.utcnow())
-    print(datetime.fromtimestamp(1620267990274/1000))
     ccdata_btcusdt.fetch_market_depth()
     # ccdata_btcusdt.fetch_trades()
