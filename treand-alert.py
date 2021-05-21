@@ -16,8 +16,6 @@ class TrendAlert:
         self._PastN:int = 100
        # self.init_writer()
 
-
-
     def my_criteria(self,inf:List[float])->bool:
         crit = [10,10,0]
         if inf>=crit:
@@ -70,7 +68,10 @@ class TrendAlert:
                     userinf = [avg[0], avg[1], avg[2]]
                     if self.alert_criteria(userinf,inf):
                         content = tweet.content.replace('\n', '').replace('\r', '')
-                        alert_content = '\n'+str(tweet.date)+" / "+tweet.user.username+" / "+content+'\n'
+                        userinf_str:str = str(userinf[0])+","+str(userinf[1])+","+str(userinf[2])
+                        tweet_inf:str = str(inf[0])+","+str(inf[1])+","+str(inf[2])
+                        alert_content = '\n'+tweet.url+' / '+str(tweet.date)+" / user inf "+ userinf_str+" / tweet inf "+tweet_inf+\
+                                        " / "+tweet.user.username+" / "+content+'\n'
                         self.make_alert(alert_content)
 
 
