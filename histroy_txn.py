@@ -7,7 +7,7 @@ from typing import List,Dict
 import time
 from requests_html import HTMLSession
 from selenium import webdriver
-
+import  math
 
 class btc_his():
     def __init__(self):
@@ -103,89 +103,101 @@ class eth_update():
         addrpd.to_csv('addr.csv')
 
     def get_current_balance(self)->None:
-        url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
         numaddr = len(self._addrlist)
         numit = numaddr//20
+        bal_list = []
         for i in range(numit):
+            url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
             for j in range(19):
                 addr = self._addrlist.iloc[i*20+j]['addr']
                 url += addr+','
+                self._name[addr] = self._addrlist.iloc[i*20+j]['name']
             url += self._addrlist.iloc[i*20+19]['addr']
             url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
             result = requests.get(url).json()
-            time.sleep(0.3)
+            time.sleep(0.4)
             for item in result['result']:
                 account = item['account']
                 balance = float(item['balance'])
                 self._eth_bal[account] = balance
+                bal_list.append([account,balance])
+                print(f'account {account} has balance {balance}')
         url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
-        for i in range(numaddr-numit*20-1):
-            addr = self._addrlist.iloc[20*numit+i]['addr']
-            url += addr+','
-        url +=self._addrlist.iloc[-1]['addr']
-        url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
-        result = requests.get(url).json()
-        time.sleep(0.3)
-        for item in result['result']:
-            account = item['account']
-            balance = float(item['balance'])
-            self._eth_bal[account] = balance
-        print(self._eth_bal)
-        print(len(self._eth_bal.keys()))
+        if numit*20 != numaddr:
+            for i in range(numaddr-numit*20-1):
+                addr = self._addrlist.iloc[20*numit+i]['addr']
+                url += addr+','
+                self._name[addr] = self._addrlist.iloc[i * 20 + j]['name']
+            url +=self._addrlist.iloc[-1]['addr']
+            url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
+            result = requests.get(url).json()
+            time.sleep(0.4)
+            for item in result['result']:
+                account = item['account']
+                balance = float(item['balance'])
+                bal_list.append([account, balance])
+                self._eth_bal[account] = balance
+                print(f'account {account} has balance {balance}')
+        # print(self._eth_bal)
+        # print(len(self._eth_bal.keys()))
+        # bal_listpd = pd.DataFrame(bal_list)
+        # bal_listpd.to_csv('bal.csv')
         # for account in result['result']:
 
     def write_change(self,addr:str,change:float,name:str)->None:
         file = open('bal_change.txt', 'a', encoding='utf-8')
         change = change*pow(10,-18)
-        file.write(str(datetime.datetime.now()) + ' '+addr+' '+name+' '+ str(change)+'\n')
+        file.write(str(datetime.datetime.now()) + ' / '+addr+' / '+str(name)+'/  '+ str(change)+'\n')
         file.close()
 
     def observe_balance_change(self):
-        url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
         numaddr = len(self._addrlist)
         numit = numaddr // 20
         for i in range(numit):
+            url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
             for j in range(19):
                 addr = self._addrlist.iloc[i * 20 + j]['addr']
                 url += addr + ','
-                name = self._addrlist.iloc[i * 20 + j]['name']
             url += self._addrlist.iloc[i * 20 + 19]['addr']
             url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
             result = requests.get(url).json()
-            time.sleep(0.3)
+            # print(result)
+            time.sleep(0.4)
             for item in result['result']:
                 account = item['account']
                 balance = float(item['balance'])
                 if balance == self._eth_bal[account]:
                     continue
-                print(f'addr {addr} updates')
+                print(f'addr {account} updates')
                 change = balance - self._eth_bal[account]
-                self.write_change(addr,change,name)
+                self.write_change(account,change,self._name[account])
                 self._eth_bal[account] = balance
-        url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
-        for i in range(numaddr-numit*20-1):
-            addr = self._addrlist.iloc[20*numit+i]['addr']
-            url += addr+','
-            name = self._addrlist.iloc[i * 20 + j]['name']
-        url += self._addrlist.iloc[-1]['addr']
-        url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
-        result = requests.get(url).json()
-        time.sleep(0.3)
-        for item in result['result']:
-            account = item['account']
-            balance = float(item['balance'])
-            if balance == self._eth_bal[account]:
-                continue
-            print(f'addr {addr} updates')
-            change = balance - self._eth_bal[account]
-            self.write_change(addr, change,name)
-            self._eth_bal[account] = balance
+        if numit*20 != numaddr:
+            url = 'https://api.etherscan.io/api?module=account&action=balancemulti&address='
+            for i in range(numaddr-numit*20-1):
+                addr = self._addrlist.iloc[20*numit+i]['addr']
+                url += addr+','
+            url += self._addrlist.iloc[-1]['addr']
+            url += '&tag=latest&apikey=U6TVI4UT54WNRCBQMPN8F88TUF6YE2QMM2'
+            result = requests.get(url).json()
+            time.sleep(0.4)
+            for item in result['result']:
+                account = item['account']
+                balance = float(item['balance'])
+                if balance == self._eth_bal[account]:
+                    continue
+                print(f'addr {account} updates')
+                change = balance - self._eth_bal[account]
+                self.write_change(account, change,self._name[addr])
+                self._eth_bal[account] = balance
 
 if __name__ == '__main__':
     eth = eth_update()
     eth.get_current_balance()
     while(1):
         eth.observe_balance_change()
+
+
     # eth.get_top_addr()
 
     # bh = btc_his()
