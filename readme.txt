@@ -5,3 +5,12 @@ trend-alert:
 
 Output-> data.txt
 Format: tweet url / tweet date / user's influence / tweet influence / user name / content
+
+ctyptodata: 
+Input: symbol. e.g., BTC-USD
+	Constantly fetch estimation funding rate, order book, trades on huobi.
+
+Output->data.csv
+Trade format: id / timestamp / tradeId / amount (trade volume) / price / direction (buy or sell)
+Order book: bids [[price,size]] / asks [[price,size]] / version (internal data) / timestamp
+Estimation funding rate: localtime / type：efr / id / open price / close price / high price / amount (based on coin) / volume / count (0). 
